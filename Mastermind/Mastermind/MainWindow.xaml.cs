@@ -47,7 +47,7 @@ namespace Mastermind
             {
                 ControlColors(selectedColors.Select(x => x.name).ToArray());
 
-                resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
+                resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
 
                 if (!isCorrectGuess)
                 {
@@ -72,7 +72,7 @@ namespace Mastermind
             attempts = 0;
             gamePoints = 100;
             selectedColors = GenerateRandomColorCodes();
-            resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
+            resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
             historyStackPanel.Children.Clear();
 
             if (!_comboBoxes.Any())
@@ -134,7 +134,7 @@ namespace Mastermind
             if (_timerCount == timerMaxCount)
             {
                 attempts++;
-                resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
+                resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
 
                 if (attempts >= maxAttempts)
                 {
@@ -270,13 +270,13 @@ namespace Mastermind
             _timer?.Stop();
 
             string title = "YOU LOOSE";
-            string message = $"You failed!! The correct code was {string.Join(',', selectedColors.Select(x => x.name))}. Play again?";
+            string message = $"You failed!! De correcte code was {string.Join(' ', selectedColors.Select(x => x.name))}. Nog een proberen?";
             MessageBoxImage icon = MessageBoxImage.Question;
 
             if (isVictory)
             {
                 title = "WINNER";
-                message = $"You cracked the code in {attempts} tries! Play again?";
+                message = $"Code is gekraakt in {attempts} pogingen! Wil je nog een proberen?";
                 icon = MessageBoxImage.Information;
             }
 
@@ -314,6 +314,12 @@ namespace Mastermind
         private void ExitApp()
         {
             Environment.Exit(0);
+        }
+
+        private void mainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (MessageBox.Show("Wilt u het spel vroegtijd beeindigen?", $"poging {attempts}/10", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
+                e.Cancel = true;
         }
     }
 }
