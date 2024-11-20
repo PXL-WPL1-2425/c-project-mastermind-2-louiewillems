@@ -30,15 +30,16 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <Label x:Name="chooseLabel1" Content="" HorizontalAlignment="Left" Margin="106,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel2" Content="" HorizontalAlignment="Left" Margin="259,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel3" Content="" HorizontalAlignment="Left" Margin="418,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel4" Content="" HorizontalAlignment="Left" Margin="577,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel1" HorizontalAlignment="Left" Margin="106,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel2" HorizontalAlignment="Left" Margin="259,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel3" HorizontalAlignment="Left" Margin="418,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel4" HorizontalAlignment="Left" Margin="577,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
         <TextBox x:Name="debugTextBox" HorizontalAlignment="Center" Margin="0,360,0,0" TextWrapping="Wrap" TextAlignment="Center" Visibility="Collapsed" Panel.ZIndex="1"
                  Text="" VerticalAlignment="Top" Width="282" Height="30"/>
         <ScrollViewer x:Name="scrollViewer" Margin="36,188,36,0" VerticalScrollBarVisibility="Hidden" >
             <StackPanel x:Name="historyStackPanel" MinWidth="300" MaxWidth="600"></StackPanel>
         </ScrollViewer>
+        <Label x:Name="resultLabel" HorizontalAlignment="Left" Margin="294,0,0,0" VerticalAlignment="Top" Width="182" Height="30" Foreground="White"/>
 
     </Grid>
 </Window>

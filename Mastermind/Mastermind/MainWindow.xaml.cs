@@ -13,8 +13,9 @@ namespace Mastermind
 
         private int attempts = 0;
         private const int maxAttempts = 10;
-        private const int timerMaxCount = 20;
+        private const int timerMaxCount = 10;
         private bool isCorrectGuess = false;
+        private int gamePoints = 100;
         private DispatcherTimer? _timer;
         private int _timerCount = 0;
 
@@ -35,23 +36,17 @@ namespace Mastermind
         {
             InitializeComponent();
             InitGame();
+
         }
 
         private void validateButton_Click(object sender, RoutedEventArgs e)
         {
-            ClearGame(onlyLabels: true);
 
-            if (isCorrectGuess)
-            {
-                //generate new game
-                selectedColors = GenerateRandomColorCodes();
-                attempts = 0;
-            }
+            if (isCorrectGuess || attempts >= maxAttempts)
+                return;
 
             if (selectedColors.Any() && selectedColors.Count == 4)
             {
-                string selectedColorString = string.Join(',', selectedColors.Select(x => x.name));
-
                 ControlColors(selectedColors.Select(x => x.name).ToArray());
 
                 if (!isCorrectGuess)
@@ -65,19 +60,23 @@ namespace Mastermind
                         attempts++;
                         StartCountdown();
                     }
-                    mainWindow.Title = $"Poging {attempts}";
+                    resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
                 }
                 else
                 {
                     EndGame(isVictory: true);
                 }
             }
+            ClearGame(onlyLabels: true);
         }
         private void InitGame()
         {
             attempts = 0;
             mainWindow.Title = "Mastermind";
+            gamePoints = 100;
             selectedColors = GenerateRandomColorCodes();
+            resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
+
             _comboBoxes.AddRange(new List<ComboBox>() { chooseCombobox1, chooseCombobox2, chooseCombobox3, chooseCombobox4 });
             _labels.AddRange(new List<Label>() { chooseLabel1, chooseLabel2, chooseLabel3, chooseLabel4 });
 
@@ -90,7 +89,6 @@ namespace Mastermind
 
                 _comboBoxes[i].SelectionChanged += OnDropdownSelection;
             }
-
             StartCountdown();
         }
 
@@ -116,9 +114,9 @@ namespace Mastermind
             if (_timerCount == timerMaxCount)
             {
                 attempts++;
-                mainWindow.Title = $"Poging {attempts}";
+                resultLabel.Content = $"TRIES: {attempts} / 10\t SCORE: {gamePoints}";
 
-                if (attempts == maxAttempts)
+                if (attempts >= maxAttempts)
                 {
                     EndGame(isVictory: false);
                 }
@@ -131,6 +129,9 @@ namespace Mastermind
 
         private void AttemptFinishedTimer(object? sender, EventArgs e)
         {
+            if (attempts >= maxAttempts)
+                EndGame(isVictory: false);
+
             StopCountdown();
         }
 
@@ -185,17 +186,23 @@ namespace Mastermind
             {
                 if (box.SelectedValue is string value)
                 {
+                    int penaltyPoints = 2;
                     (Brush mainColor, bool isCorrectColor, bool isCorrectPosition) item
                             = new(_colorOptions[value], false, false);
                     if (correctColors.Contains(value))
                     {
                         item.isCorrectColor = true;
+                        penaltyPoints = 1;
+
                         if (value.Equals(correctColors[boxIndex]))
                         {
+                            item.isCorrectPosition = true;
+                            penaltyPoints = 0;
                             correctCount++;
                         }
                     }
                     historyEntry[boxIndex] = item;
+                    gamePoints -= penaltyPoints;
 
                 }
                 boxIndex++;
@@ -274,10 +281,6 @@ namespace Mastermind
 
         private void AddToHistory((Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry)
         {
-            //    foundLabel.BorderThickness = new Thickness(3);
-            //    foundLabel.BorderBrush = Brushes.Wheat;
-            //    foundLabel.BorderBrush = Brushes.DarkRed;
-
 
             Grid grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
