@@ -2,6 +2,8 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace Mastermind
@@ -11,20 +13,20 @@ namespace Mastermind
 
         private int attempts = 0;
         private const int maxAttempts = 10;
-        private const int timerMaxCount = 10;
+        private const int timerMaxCount = 20;
         private bool isCorrectGuess = false;
         private DispatcherTimer? _timer;
         private int _timerCount = 0;
 
         private List<(string name, SolidColorBrush color)> selectedColors = new List<(string name, SolidColorBrush color)>();
-        private readonly List<(string name, SolidColorBrush color)> _colorOptions = new List<(string, SolidColorBrush)>()
+        private readonly Dictionary<string, SolidColorBrush> _colorOptions = new Dictionary<string, SolidColorBrush>()
         {
-            ("Red", Brushes.Red),
-            ("Orange", Brushes.Orange),
-            ("Yellow", Brushes.Yellow),
-            ("White", Brushes.White),
-            ("Green", Brushes.Green),
-            ("Blue", Brushes.Blue)
+            { "Red", Brushes.Red },
+            { "Orange", Brushes.Orange },
+            { "Yellow", Brushes.Yellow },
+            { "White", Brushes.White },
+            { "Green", Brushes.Green },
+            { "Blue", Brushes.Blue }
         };
         private readonly List<Label> _labels = new List<Label>();
         private readonly List<ComboBox> _comboBoxes = new List<ComboBox>();
@@ -35,6 +37,42 @@ namespace Mastermind
             InitGame();
         }
 
+        private void validateButton_Click(object sender, RoutedEventArgs e)
+        {
+            ClearGame(onlyLabels: true);
+
+            if (isCorrectGuess)
+            {
+                //generate new game
+                selectedColors = GenerateRandomColorCodes();
+                attempts = 0;
+            }
+
+            if (selectedColors.Any() && selectedColors.Count == 4)
+            {
+                string selectedColorString = string.Join(',', selectedColors.Select(x => x.name));
+
+                ControlColors(selectedColors.Select(x => x.name).ToArray());
+
+                if (!isCorrectGuess)
+                {
+                    if (attempts >= maxAttempts)
+                    {
+                        EndGame(isVictory: false);
+                    }
+                    else
+                    {
+                        attempts++;
+                        StartCountdown();
+                    }
+                    mainWindow.Title = $"Poging {attempts}";
+                }
+                else
+                {
+                    EndGame(isVictory: true);
+                }
+            }
+        }
         private void InitGame()
         {
             attempts = 0;
@@ -47,7 +85,7 @@ namespace Mastermind
             {
                 for (int j = 0; j < _colorOptions.Count; j++)
                 {
-                    _comboBoxes[i].Items.Add(_colorOptions[j].name);
+                    _comboBoxes[i].Items.Add(_colorOptions.ElementAt(j).Key);
                 }
 
                 _comboBoxes[i].SelectionChanged += OnDropdownSelection;
@@ -96,45 +134,6 @@ namespace Mastermind
             StopCountdown();
         }
 
-        private void validateButton_Click(object sender, RoutedEventArgs e)
-        {
-            ClearGame(onlyLabels: true);
-
-            if (isCorrectGuess)
-            {
-                //generate new game
-                selectedColors = GenerateRandomColorCodes();
-                attempts = 0;
-                //StartCountdown();
-            }
-
-
-            if (selectedColors.Any() && selectedColors.Count == 4)
-            {
-                string selectedColorString = string.Join(',', selectedColors.Select(x => x.name));
-
-                ControlColors(selectedColors.Select(x => x.name).ToArray());
-
-                if (!isCorrectGuess)
-                {
-                    attempts++;
-                    if (attempts == maxAttempts)
-                    {
-                        EndGame(isVictory: false);
-                    }
-                    else
-                    {
-                        mainWindow.Title = $"Poging {attempts}";
-                        StartCountdown();
-                    }
-                }
-                else
-                {
-                    EndGame(isVictory: true);
-                }
-            }
-        }
-
         private List<(string name, SolidColorBrush color)> GenerateRandomColorCodes()
         {
             List<(string, SolidColorBrush)> selectedOptions = new List<(string, SolidColorBrush)>();
@@ -143,9 +142,9 @@ namespace Mastermind
             for (int i = 0; i < 4; i++)
             {
                 if (_colorOptions.ElementAt(rand.Next(0, _colorOptions.Count()))
-                    is (string, SolidColorBrush) keyPair)
+                    is KeyValuePair<string, SolidColorBrush> keyPair)
                 {
-                    selectedOptions.Add(keyPair);
+                    selectedOptions.Add((keyPair.Key, keyPair.Value));
                 }
             }
             return selectedOptions;
@@ -157,10 +156,10 @@ namespace Mastermind
             {
                 if (_labels.FirstOrDefault(x => x.Name.EndsWith(comboBox.Name.Last())) is Label foundLabel)
                 {
-                    if (_colorOptions.FirstOrDefault(x => x.name == comboBox.SelectedValue.ToString())
+                    if (_colorOptions.FirstOrDefault(x => x.Key == comboBox.SelectedValue.ToString())
                             is (string name, SolidColorBrush color) foundColor)
                     {
-                        foundLabel.Background = foundColor.color;
+                        foundLabel.Background = foundColor.Value;
                         foundLabel.BorderThickness = new Thickness(0.3);
                         foundLabel.BorderBrush = Brushes.Gray;
                     }
@@ -178,24 +177,32 @@ namespace Mastermind
             }
             int boxIndex = 0;
             int correctCount = 0;
+
+            (Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry
+                = new (Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[4];
+
             _comboBoxes.ForEach(box =>
             {
-                if (box.SelectedValue is string value &&
-                    _labels.FirstOrDefault(x => x.Name.EndsWith(box.Name.Last())) is Label foundLabel)
+                if (box.SelectedValue is string value)
                 {
-                    if (correctColors.Contains(box.SelectedValue.ToString()))
+                    (Brush mainColor, bool isCorrectColor, bool isCorrectPosition) item
+                            = new(_colorOptions[value], false, false);
+                    if (correctColors.Contains(value))
                     {
-                        foundLabel.BorderThickness = new Thickness(3);
-                        foundLabel.BorderBrush = Brushes.Wheat;
+                        item.isCorrectColor = true;
                         if (value.Equals(correctColors[boxIndex]))
                         {
-                            foundLabel.BorderBrush = Brushes.DarkRed;
                             correctCount++;
                         }
                     }
+                    historyEntry[boxIndex] = item;
+
                 }
                 boxIndex++;
             });
+
+
+            AddToHistory(historyEntry);
 
             if (correctCount == _comboBoxes.Count)
             {
@@ -228,7 +235,7 @@ namespace Mastermind
                 });
             }
 
-            mainWindow.Title = "Mastermind";
+            //mainWindow.Title = "Mastermind";
         }
 
         private void mainWindow_KeyDown(object sender, KeyEventArgs e)
@@ -262,7 +269,48 @@ namespace Mastermind
             else
             {
             }
-            _timer.Stop();
+            _timer?.Stop();
+        }
+
+        private void AddToHistory((Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry)
+        {
+            //    foundLabel.BorderThickness = new Thickness(3);
+            //    foundLabel.BorderBrush = Brushes.Wheat;
+            //    foundLabel.BorderBrush = Brushes.DarkRed;
+
+
+            Grid grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(40) });
+
+            for (int i = 0; i < 4; i++)
+            {
+                Ellipse circle = new Ellipse();
+                circle.Width = 35;
+                circle.Height = 35;
+                circle.Fill = historyEntry[i].mainColor;
+                circle.HorizontalAlignment = HorizontalAlignment.Center;
+                circle.VerticalAlignment = VerticalAlignment.Center;
+                circle.SetValue(Grid.ColumnProperty, i);
+
+                if (historyEntry[i].isCorrectPosition)
+                {
+                    circle.StrokeThickness = 2;
+                    circle.Stroke = Brushes.DarkRed;
+                }
+                else if (historyEntry[i].isCorrectColor)
+                {
+                    circle.StrokeThickness = 2;
+                    circle.Stroke = Brushes.Wheat;
+                }
+
+                grid.Children.Add(circle);
+            }
+
+            historyStackPanel.Children.Add(grid);
         }
 
     }

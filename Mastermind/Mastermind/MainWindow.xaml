@@ -8,15 +8,21 @@
         Title="Mastermind" Height="450" Width="800"
         x:Name="mainWindow" KeyDown="mainWindow_KeyDown" 
         >
+    <Window.Background>
+        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="Black"/>
+            <GradientStop Color="#FF221C40" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Background>
     <Grid ShowGridLines="True">
 
-        <ComboBox x:Name="chooseCombobox1" HorizontalAlignment="Left" Margin="106,65,0,0" VerticalAlignment="Top" Width="115" />
-        <ComboBox x:Name="chooseCombobox2" HorizontalAlignment="Left" Margin="259,65,0,0" VerticalAlignment="Top" Width="115"/>
-        <ComboBox x:Name="chooseCombobox3" HorizontalAlignment="Left" Margin="418,65,0,0" VerticalAlignment="Top" Width="115"/>
-        <ComboBox x:Name="chooseCombobox4" HorizontalAlignment="Left" Margin="577,65,0,0" VerticalAlignment="Top" Width="115"/>
+        <ComboBox x:Name="chooseCombobox1" HorizontalAlignment="Left" Margin="106,31,0,0" VerticalAlignment="Top" Width="115" />
+        <ComboBox x:Name="chooseCombobox2" HorizontalAlignment="Left" Margin="259,31,0,0" VerticalAlignment="Top" Width="115"/>
+        <ComboBox x:Name="chooseCombobox3" HorizontalAlignment="Left" Margin="418,31,0,0" VerticalAlignment="Top" Width="115"/>
+        <ComboBox x:Name="chooseCombobox4" HorizontalAlignment="Left" Margin="577,31,0,0" VerticalAlignment="Top" Width="115"/>
         <Button x:Name="validateButton" Content="Check code" HorizontalAlignment="Center"  VerticalAlignment="Top" 
                 Width="224" Foreground="White" FontSize="18" FontWeight="Bold" FontFamily="Verdana" 
-                Height="37"  Click="validateButton_Click" Margin="0,191,0,0">
+                Height="37"  Click="validateButton_Click" Margin="0,133,0,0">
             <Button.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF19B5FC"/>
@@ -24,13 +30,15 @@
                 </LinearGradientBrush>
             </Button.Background>
         </Button>
-        <Label x:Name="chooseLabel1" Content="" HorizontalAlignment="Left" Margin="106,106,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel2" Content="" HorizontalAlignment="Left" Margin="259,106,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel3" Content="" HorizontalAlignment="Left" Margin="418,106,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <Label x:Name="chooseLabel4" Content="" HorizontalAlignment="Left" Margin="577,106,0,0" VerticalAlignment="Top" Width="115" Height="70" />
-        <TextBox x:Name="debugTextBox" HorizontalAlignment="Center" Margin="0,360,0,0" TextWrapping="Wrap" TextAlignment="Center" Visibility="Collapsed"
+        <Label x:Name="chooseLabel1" Content="" HorizontalAlignment="Left" Margin="106,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel2" Content="" HorizontalAlignment="Left" Margin="259,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel3" Content="" HorizontalAlignment="Left" Margin="418,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <Label x:Name="chooseLabel4" Content="" HorizontalAlignment="Left" Margin="577,58,0,0" VerticalAlignment="Top" Width="115" Height="70" />
+        <TextBox x:Name="debugTextBox" HorizontalAlignment="Center" Margin="0,360,0,0" TextWrapping="Wrap" TextAlignment="Center" Visibility="Collapsed" Panel.ZIndex="1"
                  Text="" VerticalAlignment="Top" Width="282" Height="30"/>
-
+        <ScrollViewer x:Name="scrollViewer" Margin="36,188,36,0" VerticalScrollBarVisibility="Hidden" >
+            <StackPanel x:Name="historyStackPanel" MinWidth="300" MaxWidth="600"></StackPanel>
+        </ScrollViewer>
 
     </Grid>
 </Window>
