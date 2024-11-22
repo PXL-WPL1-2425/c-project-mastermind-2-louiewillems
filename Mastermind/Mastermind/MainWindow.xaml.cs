@@ -1,188 +1,86 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace Mastermind
 {
     public partial class MainWindow : Window
     {
+        #region properties
         private bool isCorrectGuess = false;
         private int gamePoints = 100;
         private int attempts = 0;
-        private const int maxAttempts = 10;
+        private const int _maxAttempts = 10;
         private DispatcherTimer? _timer;
         private int _timerCount = 0;
-        private const int timerMaxCount = 10;
+        private const int _timerMaxCount = 10;
+        private bool enableResetOnEachTurn = true;
 
-        private List<(string name, SolidColorBrush color)> selectedColors = new List<(string name, SolidColorBrush color)>();
-        private readonly Dictionary<string, SolidColorBrush> _colorOptions = new Dictionary<string, SolidColorBrush>()
-        {
-            { "Red", Brushes.Red },
-            { "Orange", Brushes.Orange },
-            { "Yellow", Brushes.Yellow },
-            { "White", Brushes.White },
-            { "Green", Brushes.Green },
-            { "Blue", Brushes.Blue }
-        };
+        private List<(string name, List<SolidColorBrush> color)> selectedColors = new List<(string name, List<SolidColorBrush> color)>();
         private readonly List<Label> _labels = new List<Label>();
-        private readonly List<ComboBox> _comboBoxes = new List<ComboBox>();
+        private readonly List<Ellipse> _choiceEllipses = new List<Ellipse>();
+        private readonly Dictionary<string, List<SolidColorBrush>> _colorOptions = new Dictionary<string, List<SolidColorBrush>>()
+        {
+            { "red", new List<SolidColorBrush> { Brushes.WhiteSmoke, Brushes.Red, Brushes.DarkRed } },
+            { "orange", new List<SolidColorBrush> { Brushes.WhiteSmoke, Brushes.Orange, Brushes.OrangeRed } },
+            { "yellow", new List<SolidColorBrush> { Brushes.LightYellow, Brushes.Yellow, Brushes.Orange } },
+            { "white", new List<SolidColorBrush> { Brushes.White, Brushes.WhiteSmoke, Brushes.Gray } },
+            { "green", new List<SolidColorBrush> { Brushes.WhiteSmoke, Brushes.Green, Brushes.DarkGreen } },
+            { "blue", new List<SolidColorBrush> { Brushes.FloralWhite, Brushes.Blue, Brushes.DarkBlue } },
+        };
+
+        private Ellipse? _selectedEllipse;
+
+        #endregion
 
         public MainWindow()
         {
             InitializeComponent();
+
             StartGame();
         }
 
-        private void validateButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (isCorrectGuess || attempts >= maxAttempts)
-                return;
-
-            attempts++;
-            if (selectedColors.Any() && selectedColors.Count == 4)
-            {
-                ControlColors(selectedColors.Select(x => x.name).ToArray());
-
-                resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
-
-                if (!isCorrectGuess)
-                {
-                    if (attempts >= maxAttempts)
-                    {
-                        EndGame(isVictory: false);
-                    }
-                    else
-                    {
-                        StartCountdown();
-                    }
-                }
-                else
-                {
-                    EndGame(isVictory: true);
-                }
-            }
-        }
-
+        #region Game
         private void StartGame()
         {
+            isCorrectGuess = false;
             attempts = 0;
             gamePoints = 100;
             selectedColors = GenerateRandomColorCodes();
-            resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
+            pogingLabel.Text = $"POGING: {attempts}";
+            scoreLabel.Text = $"{gamePoints}";
+
             historyStackPanel.Children.Clear();
+            _choiceEllipses.Clear();
+            _labels.Clear();
+            _choiceEllipses.AddRange(new List<Ellipse>() { choiceEllipse0, choiceEllipse1, choiceEllipse2, choiceEllipse3 });
+            _labels.AddRange(new List<Label>() { redLabel, orangeLabel, yellowLabel, whiteLabel, greenLabel, blueLabel });
 
-            if (!_comboBoxes.Any())
-            {
-                //init combobox/labels
-                _comboBoxes.AddRange(new List<ComboBox>() { chooseCombobox1, chooseCombobox2, chooseCombobox3, chooseCombobox4 });
-                _labels.AddRange(new List<Label>() { chooseLabel1, chooseLabel2, chooseLabel3, chooseLabel4 });
-
-                for (int i = 0; i < _comboBoxes.Count(); i++)
-                {
-                    for (int j = 0; j < _colorOptions.Count; j++)
-                    {
-                        _comboBoxes[i].Items.Add(_colorOptions.ElementAt(j).Key);
-                    }
-                    _comboBoxes[i].SelectionChanged += OnDropdownSelection;
-                }
-            }
-            //clear labels
-            _labels.ForEach(label =>
-            {
-                label.BorderBrush = null;
-                label.Background = null;
-            });
-
-            //clear boxes
-            _comboBoxes.ForEach(box =>
-            {
-                box.SelectedValue = null;
-            });
-
+            ResetAllBalls();
             StartCountdown();
         }
-
-        private void AttemptFinishedTimer(object? sender, EventArgs e)
+        private List<(string name, List<SolidColorBrush> color)> GenerateRandomColorCodes()
         {
-            if (attempts >= maxAttempts)
-                EndGame(isVictory: false);
-
-            StopCountdown();
-        }
-        /// <summary>
-        /// The player has only 10 seconds to complete one phase. The timer starts at 1 and ends at 10
-        /// </summary>
-        private void StartCountdown()
-        {
-            _timerCount = 1;
-            _timer?.Stop();
-            _timer = new DispatcherTimer();
-            _timer.Tick += AttemptFinishedTimer;
-            _timer.Interval = TimeSpan.FromSeconds(1);
-            _timer.Start();
-        }
-        /// <summary>
-        /// When the running timer reaches 10, the attempt will increase. After, the coundown will start again.
-        /// </summary>
-        private void StopCountdown()
-        {
-            _timerCount++;
-            if (_timerCount == timerMaxCount)
-            {
-                attempts++;
-                resultLabel.Content = $"POGING: {attempts} / 10\t SCORE: {gamePoints}";
-
-                if (attempts >= maxAttempts)
-                {
-                    EndGame(isVictory: false);
-                }
-                else
-                {
-                    StartCountdown();
-                }
-            }
-        }
-
-        private List<(string name, SolidColorBrush color)> GenerateRandomColorCodes()
-        {
-            List<(string, SolidColorBrush)> selectedOptions = new List<(string, SolidColorBrush)>();
+            List<(string, List<SolidColorBrush>)> selectedOptions = new List<(string, List<SolidColorBrush>)>();
 
             var rand = new Random();
             for (int i = 0; i < 4; i++)
             {
                 if (_colorOptions.ElementAt(rand.Next(0, _colorOptions.Count()))
-                    is KeyValuePair<string, SolidColorBrush> keyPair)
+                    is KeyValuePair<string, List<SolidColorBrush>> keyPair)
                 {
                     selectedOptions.Add((keyPair.Key, keyPair.Value));
                 }
             }
             return selectedOptions;
         }
-        private void OnDropdownSelection(object sender, SelectionChangedEventArgs e)
-        {
-            if (sender is ComboBox comboBox && comboBox.SelectedValue is string value)
-            {
-                if (_labels.FirstOrDefault(x => x.Name.EndsWith(comboBox.Name.Last())) is Label foundLabel)
-                {
-                    if (_colorOptions.FirstOrDefault(x => x.Key == value)
-                            is (string name, SolidColorBrush color) foundColor)
-                    {
-                        foundLabel.Background = foundColor.Value;
-                        foundLabel.BorderThickness = new Thickness(0.3);
-                        foundLabel.BorderBrush = Brushes.Gray;
-                    }
-                }
-            }
-
-        }
-
         private void ControlColors(string[] correctColors)
         {
-            if (_comboBoxes.Any(x => x.SelectedValue == null))
+            if (_choiceEllipses.Any(x => x.Tag == null))
             {
                 MessageBox.Show("Some values are not selected", "Invalid input", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
@@ -190,15 +88,15 @@ namespace Mastermind
             int boxIndex = 0;
             int correctCount = 0;
 
-            (Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry
-                = new (Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[4];
+            (List<SolidColorBrush> mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry
+                = new (List<SolidColorBrush> mainColor, bool isCorrectColor, bool isCorrectPosition)[4];
 
-            _comboBoxes.ForEach(box =>
+            _choiceEllipses.ForEach(box =>
             {
-                if (box.SelectedValue is string value)
+                if (box.Tag is string value)
                 {
                     int penaltyPoints = 2;
-                    (Brush mainColor, bool isCorrectColor, bool isCorrectPosition) item
+                    (List<SolidColorBrush> mainColor, bool isCorrectColor, bool isCorrectPosition) item
                             = new(_colorOptions[value], false, false);
                     if (correctColors.Contains(value))
                     {
@@ -222,86 +120,412 @@ namespace Mastermind
 
             AddToHistory(historyEntry);
 
-            if (correctCount == _comboBoxes.Count)
+            if (correctCount == _choiceEllipses.Count)
             {
                 isCorrectGuess = true;
             }
 
         }
-        private void AddToHistory((Brush mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry)
+        private void AddToHistory((List<SolidColorBrush> mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry)
         {
-
             Grid grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(25, GridUnitType.Pixel) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(40) });
 
-            for (int i = 0; i < 4; i++)
+            Label label = new Label();
+            label.Content = attempts;
+            label.Foreground = Brushes.White;
+            label.SetValue(Grid.ColumnProperty, 0);
+            grid.Children.Add(label);
+
+            for (int i = 1; i < 5; i++)
             {
+                int hIndex = i - 1;
                 Ellipse circle = new Ellipse();
                 circle.Width = 35;
                 circle.Height = 35;
-                circle.Fill = historyEntry[i].mainColor;
+                circle.Fill = GetGradientBrush(historyEntry[hIndex].mainColor, new Point(0.3, 0.3));
                 circle.HorizontalAlignment = HorizontalAlignment.Center;
                 circle.VerticalAlignment = VerticalAlignment.Center;
                 circle.SetValue(Grid.ColumnProperty, i);
 
-                if (historyEntry[i].isCorrectPosition)
+                if (historyEntry[hIndex].isCorrectPosition)
                 {
                     circle.StrokeThickness = 2;
-                    circle.Stroke = Brushes.DarkRed;
+                    circle.Stroke = Brushes.Red;
                 }
-                else if (historyEntry[i].isCorrectColor)
+                else if (historyEntry[hIndex].isCorrectColor)
                 {
                     circle.StrokeThickness = 2;
                     circle.Stroke = Brushes.Wheat;
                 }
 
+                // animation
+                TranslateTransform translateTransform = new TranslateTransform(0, 0);
+                circle.RenderTransform = translateTransform;
                 grid.Children.Add(circle);
+
+                DoubleAnimation dropAnimation = new DoubleAnimation
+                {
+                    From = -70,
+                    To = 0,
+                    Duration = TimeSpan.FromMilliseconds(500),
+                    EasingFunction = new BounceEase
+                    {
+                        Bounces = 2,
+                        Bounciness = 2,
+                        EasingMode = EasingMode.EaseOut
+                    }
+                };
+                translateTransform.BeginAnimation(TranslateTransform.YProperty, dropAnimation);
             }
 
-            historyStackPanel.Children.Add(grid);
+            historyStackPanel.Children.Insert(0, grid);
+
+            ScrollToTop();
         }
-        
+        private void ResetAllBalls()
+        {
+            _selectedEllipse = null;
+            for (int i = 0; i < _labels.Count(); i++)
+            {
+                _labels[i].Opacity = 0.4;
+            }
+            for (int i = 0; i < _choiceEllipses.Count(); i++)
+            {
+                _choiceEllipses[i].StrokeThickness = 1;
+                _choiceEllipses[i].Stroke = Brushes.LightGray;
+                _choiceEllipses[i].Fill = Brushes.Transparent;
+                _choiceEllipses[i].Tag = null;
+            }
+        }
+        private void SelectBall(Ellipse ellipse)
+        {
+            _selectedEllipse = ellipse;
+            for (int i = 0; i < _labels.Count(); i++)
+            {
+                _labels[i].Opacity = 0.4;
+            }
+
+            for (int i = 0; i < _choiceEllipses.Count(); i++)
+            {
+                if (_choiceEllipses[i].Name == ellipse.Name)
+                {
+                    // select label
+                    _choiceEllipses[i].StrokeThickness = 2;
+                    _choiceEllipses[i].Stroke = Brushes.White;
+
+                    // color label
+                    if (_choiceEllipses[i].Tag is string value)
+                    {
+                        if (_labels.FirstOrDefault(x => (string)x.Tag == value) is Label label)
+                        {
+                            label.Opacity = 1;
+                        }
+                    }
+                }
+                else
+                {
+                    // clear the rest
+                    _choiceEllipses[i].StrokeThickness = 0.2;
+                    if (_choiceEllipses[i].Tag is not null)
+                    {
+                        _choiceEllipses[i].StrokeThickness = 0;
+                        _choiceEllipses[i].Stroke = Brushes.Transparent;
+                    }
+                }
+            }
+
+        }
         private void EndGame(bool isVictory)
         {
             _timer?.Stop();
 
             string title = "YOU LOOSE";
-            string message = $"You failed!! De correcte code was {string.Join(' ', selectedColors.Select(x => x.name))}. Nog een proberen?";
+            string message = $"You failed!! De correcte code was {string.Join(' ', selectedColors.Select(x => x.name))}. Nog eens proberen?";
             MessageBoxImage icon = MessageBoxImage.Question;
 
             if (isVictory)
             {
                 title = "WINNER";
-                message = $"Code is gekraakt in {attempts} pogingen! Wil je nog een proberen?";
+                message = $"Code is gekraakt in {attempts} pogingen! Wil je nog eens proberen?";
                 icon = MessageBoxImage.Information;
             }
 
             if (MessageBox.Show(message, title, MessageBoxButton.YesNo, icon) == MessageBoxResult.Yes)
-            {
                 StartGame();
-            }
             else
-            {
                 ExitApp();
-            }
         }
 
+        #endregion
 
-        private void mainWindow_KeyDown(object sender, KeyEventArgs e)
+        #region Timer
+        private void AttemptFinishedTimer(object? sender, EventArgs e)
         {
-#if DEBUG
-            if ((Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) &&
-                 e.Key == Key.F12
-                 )
-            {
-                ToggleDebug();
-            }
-#endif
+            _timerCount++;
+            timeLabel.Text = $"{(_timerMaxCount + 1) - _timerCount}";
+            if (attempts >= _maxAttempts)
+                EndGame(isVictory: false);
+
+            StopCountdown();
         }
+        /// <summary>
+        /// The player has only 10 seconds to complete one phase. The timer starts at 1 and ends at 10
+        /// </summary>
+        private void StartCountdown()
+        {
+            _timerCount = 1;
+            timeLabel.Text = $"{(_timerMaxCount + 1) - _timerCount}";
+            _timer?.Stop();
+            _timer = new DispatcherTimer();
+            _timer.Tick += AttemptFinishedTimer;
+            _timer.Interval = TimeSpan.FromSeconds(1);
+            _timer.Start();
+        }
+        /// <summary>
+        /// When the running timer reaches 10, the attempt will increase. After, the coundown will start again.
+        /// </summary>
+        private void StopCountdown()
+        {
+            if (_timerCount == _timerMaxCount + 1)
+            {
+                attempts++;
+                pogingLabel.Text = $"POGING: {attempts}";
+                scoreLabel.Text = $"{gamePoints}";
+
+                if (attempts >= _maxAttempts)
+                    EndGame(isVictory: false);
+                else
+                    StartCountdown();
+            }
+        }
+        #endregion
+
+        #region Extra Functions
+        private GradientBrush GetGradientBrush(List<SolidColorBrush> colors, Point origin)
+        {
+            return new RadialGradientBrush
+            {
+                GradientOrigin = origin,
+                Center = new Point(0.5, 0.5),
+                GradientStops = new GradientStopCollection
+                    {
+                        new GradientStop(colors[0].Color, 0.0),
+                        new GradientStop(colors[1].Color, 0.5),
+                        new GradientStop(colors[2].Color, 1.0)
+                    }
+            };
+        }
+        private void ScrollToTop()
+        {
+            scrollViewer.ScrollToTop();
+        }
+        private void AnimateButton(Button button, double from, double to, int speedMs, bool autoReverse = false)
+        {
+            ScaleTransform scaleTransform = new ScaleTransform(from, to);
+            button.RenderTransform = scaleTransform;
+            button.RenderTransformOrigin = new Point(0.5, 0.5);
+            DoubleAnimation animation = new DoubleAnimation()
+            {
+                From = from,
+                To = to,
+                AutoReverse = autoReverse,
+                Duration = TimeSpan.FromMilliseconds(speedMs),
+            };
+            scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, animation);
+            scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
+        }
+        #endregion
+
+        #region Events
+        private void validateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button)
+            {
+                AnimateButton(button, from: 1, to: 0.9, speedMs: 80, autoReverse: true);
+            }
+
+            if (isCorrectGuess || attempts >= _maxAttempts)
+                return;
+
+            attempts++;
+            if (selectedColors.Any() && selectedColors.Count == 4)
+            {
+                ControlColors(selectedColors.Select(x => x.name).ToArray());
+                pogingLabel.Text = $"POGING: {attempts}";
+                scoreLabel.Text = $"{gamePoints}";
+
+                if (!isCorrectGuess)
+                {
+                    if (attempts >= _maxAttempts)
+                    {
+                        EndGame(isVictory: false);
+                    }
+                    else
+                    {
+                        if (enableResetOnEachTurn)
+                            ResetAllBalls();
+
+                        StartCountdown();
+                    }
+                }
+                else
+                {
+                    EndGame(isVictory: true);
+                }
+            }
+        }
+        private void validateButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Button button)
+                AnimateButton(button, from: 1, to: 1.05, speedMs: 80);
+        }
+        private void validateButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Button button)
+                AnimateButton(button, from: 1.05, to: 1, speedMs: 80);
+
+        }
+        private void Label_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Label label)
+                label.Opacity = 1;
+        }
+        private void Label_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Label label)
+            {
+                for (int i = 0; i < _labels.Count(); i++)
+                {
+                    if (_selectedEllipse != null && _selectedEllipse.Tag is string value && (string)_labels[i].Tag == value)
+                    {
+                        _labels[i].Opacity = 1;
+                    }
+                    else
+                    {
+                        _labels[i].Opacity = 0.4;
+                    }
+                }
+
+            }
+        }
+        private void Label_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+
+            if (sender is Label label && label.Tag is string value)
+            {
+                label.Opacity = 1;
+
+                for (int i = 0; i < _labels.Count(); i++)
+                {
+                    if (!_labels[i].Name.Equals(label.Name))
+                    {
+                        _labels[i].Opacity = 0.4;
+                    }
+                }
+
+                if (_selectedEllipse == null)
+                    _selectedEllipse = _choiceEllipses.FirstOrDefault();
+
+                if (_selectedEllipse != null &&
+                    _colorOptions.FirstOrDefault(x => x.Key == value)
+                        is (string name, List<SolidColorBrush> colors) foundColor)
+                {
+                    _selectedEllipse.StrokeThickness = 2;
+                    _selectedEllipse.Stroke = Brushes.White;
+                    _selectedEllipse.Fill = GetGradientBrush(foundColor.Value, new Point(0.3, 0.3));
+                    _selectedEllipse.Tag = value;
+
+                    ScaleTransform scaleTransform = new ScaleTransform(1, 1);
+                    _selectedEllipse.RenderTransform = scaleTransform;
+                    _selectedEllipse.RenderTransformOrigin = new Point(0.5, 0.5);
+
+                    DoubleAnimation scaleAnimation = new DoubleAnimation()
+                    {
+                        From = 1,
+                        To = 1.05,
+                        Duration = TimeSpan.FromMilliseconds(120),
+                        AutoReverse = true,
+                        EasingFunction = new BounceEase()
+                        {
+                            Bounces = 1,
+                            Bounciness = 2,
+                            EasingMode = EasingMode.EaseOut
+                        }
+                    };
+
+                    scaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnimation);
+                    scaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnimation);
+                }
+            }
+
+        }
+        private void Ellipse_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is Ellipse ellipse)
+            {
+                int index = -1;
+
+                if (ellipse.Tag is string value &&
+                    _colorOptions.Select(x => x.Key).ToList().IndexOf(value) is int foundInd &&
+                    foundInd != -1)
+                {
+                    index = foundInd;
+                }
+
+                Label? foundLabel = null;
+                if (e.Delta > 0)
+                {
+                    foundLabel = _labels.ElementAtOrDefault(index + 1);
+                }
+                else if (e.Delta < 0)
+                {
+                    foundLabel = _labels.ElementAtOrDefault(index - 1);
+                }
+
+                if (foundLabel is not null)
+                {
+                    Label_MouseLeftButtonUp(foundLabel, null!);
+                }
+
+            }
+        }
+        private void Ellipse_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Ellipse ellipse)
+            {
+                SelectBall(ellipse);
+            }
+        }
+        private void OnScoreLabelsTextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox box && mainWindow.IsLoaded &&
+                (sender == scoreLabel || (sender == timeLabel && timeLabel.Text.Equals(_maxAttempts.ToString()))))
+            {
+                DoubleAnimation animation = new DoubleAnimation()
+                {
+                    From = box.FontSize,
+                    To = box.FontSize * 1.1,
+                    Duration = TimeSpan.FromMilliseconds(150),
+                    AutoReverse = true,
+                    EasingFunction = new BounceEase
+                    {
+                        Bounces = 2,
+                        Bounciness = 5
+                    }
+                };
+
+                box.BeginAnimation(TextBox.FontSizeProperty, animation);
+            }
+        }
+        #endregion
+
+        #region Exit
         /// <summary>
         /// Check the color code in debug mode
         /// </summary>
@@ -315,11 +539,23 @@ namespace Mastermind
         {
             Environment.Exit(0);
         }
-
+        private void mainWindow_KeyDown(object sender, KeyEventArgs e)
+        {
+#if DEBUG
+            if ((Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) &&
+                 e.Key == Key.F12
+                 )
+            {
+                ToggleDebug();
+            }
+#endif
+        }
         private void mainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (MessageBox.Show("Wilt u het spel vroegtijd beeindigen?", $"poging {attempts}/10", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
+            if (MessageBox.Show("Wilt u het spel vroegtijdig beeindigen?", $"poging {attempts}/10", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
                 e.Cancel = true;
         }
+        #endregion
+
     }
 }
