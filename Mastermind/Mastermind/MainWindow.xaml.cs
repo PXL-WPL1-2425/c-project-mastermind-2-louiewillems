@@ -12,6 +12,7 @@ namespace Mastermind
     {
         #region properties
         private bool isCorrectGuess = false;
+        private bool isDebugMode = false;
         private int gamePoints = 100;
         private int attempts = 0;
         private const int _maxAttempts = 10;
@@ -45,12 +46,16 @@ namespace Mastermind
         }
 
         #region Game
+        /// <summary>
+        /// Resets everything and starts a new game
+        /// </summary>
         private void StartGame()
         {
             isCorrectGuess = false;
             attempts = 0;
             gamePoints = 100;
             selectedColors = GenerateRandomColorCodes();
+            debugTextBox.Text = $"Generated colorcode {string.Join(',', selectedColors.Select(x => x.name))}";
             pogingLabel.Text = $"POGING: {attempts}";
             scoreLabel.Text = $"{gamePoints}";
 
@@ -63,6 +68,8 @@ namespace Mastermind
             ResetAllBalls();
             StartCountdown();
         }
+        
+        /// <returns>4 random colors</returns>
         private List<(string name, List<SolidColorBrush> color)> GenerateRandomColorCodes()
         {
             List<(string, List<SolidColorBrush>)> selectedOptions = new List<(string, List<SolidColorBrush>)>();
@@ -78,6 +85,14 @@ namespace Mastermind
             }
             return selectedOptions;
         }
+
+        /// <summary>
+        /// Checks the players input
+        /// <para>1. Adds gamepoints.</para>
+        /// <para>2. Adds the progress to history timeline.</para>
+        /// <para>3. If correct, updates the game. SeeProp: <see cref="isCorrectGuess"/></para>
+        /// </summary>
+        /// <param name="correctColors"></param>
         private void ControlColors(string[] correctColors)
         {
             if (_choiceEllipses.Any(x => x.Tag == null))
@@ -241,6 +256,11 @@ namespace Mastermind
             }
 
         }
+        
+        /// <summary>
+        /// Ends the game on win/loose. Gives an option to exit the game.
+        /// </summary>
+        /// <param name="isVictory"></param>
         private void EndGame(bool isVictory)
         {
             _timer?.Stop();
@@ -321,6 +341,10 @@ namespace Mastermind
                     }
             };
         }
+        
+        /// <summary>
+        /// Scoll the history timeline to TOP
+        /// </summary>
         private void ScrollToTop()
         {
             scrollViewer.ScrollToTop();
@@ -531,9 +555,16 @@ namespace Mastermind
         /// </summary>
         private void ToggleDebug()
         {
-            string selectedColorString = string.Join(',', selectedColors.Select(x => x.name));
-            debugTextBox.Text = $"Generated colorcode {selectedColorString}";
-            debugTextBox.Visibility = (debugTextBox.Visibility == Visibility.Visible) ? Visibility.Collapsed : Visibility.Visible;
+            if (debugTextBox.Visibility == Visibility.Visible)
+            {
+                debugTextBox.Visibility = Visibility.Collapsed;
+                isDebugMode = false;
+            }
+            else
+            {
+                isDebugMode = true;
+                debugTextBox.Visibility = Visibility.Visible;
+            }
         }
         private void ExitApp()
         {
