@@ -11,17 +11,17 @@ namespace Mastermind
     public partial class MainWindow : Window
     {
         #region properties
-        private bool isCorrectGuess = false;
-        private bool isDebugMode = false;
-        private int gamePoints = 100;
-        private int attempts = 0;
+        private bool _isCorrectGuess = false;
+        private bool _isDebugMode = false;
+        private int _gamePoints = 100;
+        private int _attempts = 0;
         private const int _maxAttempts = 10;
         private DispatcherTimer? _timer;
         private int _timerCount = 0;
         private const int _timerMaxCount = 10;
-        private bool enableResetOnEachTurn = true;
+        private bool _enableResetOnEachTurn = true;
 
-        private List<(string name, List<SolidColorBrush> color)> selectedColors = new List<(string name, List<SolidColorBrush> color)>();
+        private List<(string name, List<SolidColorBrush> color)> _selectedColors = new List<(string name, List<SolidColorBrush> color)>();
         private readonly List<Label> _labels = new List<Label>();
         private readonly List<Ellipse> _choiceEllipses = new List<Ellipse>();
         private readonly Dictionary<string, List<SolidColorBrush>> _colorOptions = new Dictionary<string, List<SolidColorBrush>>()
@@ -42,6 +42,38 @@ namespace Mastermind
         {
             InitializeComponent();
 
+            RadialGradientBrush backRadial = new RadialGradientBrush
+            {
+                GradientOrigin = new Point(0.4, 0.5),
+                Center = new Point(0.5, 0.5),
+                RadiusX = 2,
+                RadiusY = 1.2
+            };
+
+            //radialGradientBrush.GradientStops.Add(new GradientStop(Colors.Black, 1.0));
+            backRadial.GradientStops.Add(new GradientStop(Color.FromRgb(4, 3, 8), 1.0));
+            backRadial.GradientStops.Add(new GradientStop(Color.FromRgb(34, 28, 64), 0.0));
+            this.Background = backRadial;
+            PointAnimation gradOrininPointAnimation = new PointAnimation
+            {
+                From = new Point(0.4, 0.5),
+                To = new Point(0.6, 0.6),
+                Duration = TimeSpan.FromSeconds(10),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            backRadial.BeginAnimation(RadialGradientBrush.GradientOriginProperty, gradOrininPointAnimation);
+
+            DoubleAnimation stopPosition0Animation = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.4,
+                Duration = TimeSpan.FromSeconds(10),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            backRadial.GradientStops[0].BeginAnimation(GradientStop.OffsetProperty, stopPosition0Animation);
+
             StartGame();
         }
 
@@ -51,13 +83,13 @@ namespace Mastermind
         /// </summary>
         private void StartGame()
         {
-            isCorrectGuess = false;
-            attempts = 0;
-            gamePoints = 100;
-            selectedColors = GenerateRandomColorCodes();
-            debugTextBox.Text = $"Generated colorcode {string.Join(',', selectedColors.Select(x => x.name))}";
-            pogingLabel.Text = $"POGING: {attempts}";
-            scoreLabel.Text = $"{gamePoints}";
+            _isCorrectGuess = false;
+            _attempts = 0;
+            _gamePoints = 100;
+            _selectedColors = GenerateRandomColorCodes();
+            debugTextBox.Text = $"Generated colorcode {string.Join(',', _selectedColors.Select(x => x.name))}";
+            pogingLabel.Text = $"POGING: {_attempts}";
+            scoreLabel.Text = $"{_gamePoints}";
 
             historyStackPanel.Children.Clear();
             _choiceEllipses.Clear();
@@ -90,7 +122,7 @@ namespace Mastermind
         /// Checks the players input
         /// <para>1. Adds gamepoints.</para>
         /// <para>2. Adds the progress to history timeline.</para>
-        /// <para>3. If correct, updates the game. SeeProp: <see cref="isCorrectGuess"/></para>
+        /// <para>3. If correct, updates the game. SeeProp: <see cref="_isCorrectGuess"/></para>
         /// </summary>
         /// <param name="correctColors"></param>
         private void ControlColors(string[] correctColors)
@@ -126,7 +158,7 @@ namespace Mastermind
                         }
                     }
                     historyEntry[boxIndex] = item;
-                    gamePoints -= penaltyPoints;
+                    _gamePoints -= penaltyPoints;
 
                 }
                 boxIndex++;
@@ -137,14 +169,14 @@ namespace Mastermind
 
             if (correctCount == _choiceEllipses.Count)
             {
-                isCorrectGuess = true;
+                _isCorrectGuess = true;
             }
 
         }
         private void AddToHistory((List<SolidColorBrush> mainColor, bool isCorrectColor, bool isCorrectPosition)[] historyEntry)
         {
             Grid grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(25, GridUnitType.Pixel) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(35, GridUnitType.Pixel) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
@@ -152,8 +184,24 @@ namespace Mastermind
             grid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(40) });
 
             Label label = new Label();
-            label.Content = attempts;
+            label.Content = _attempts;
+            label.FontSize = 15;
+            label.FontWeight = FontWeights.Bold;
             label.Foreground = Brushes.White;
+            label.HorizontalContentAlignment = HorizontalAlignment.Center;
+            DoubleAnimation animation = new DoubleAnimation()
+            {
+                From = label.FontSize,
+                To = label.FontSize * 1.5,
+                Duration = TimeSpan.FromMilliseconds(150),
+                AutoReverse = true,
+                EasingFunction = new BounceEase
+                {
+                    Bounces = 2,
+                    Bounciness = 5
+                }
+            };
+            label.BeginAnimation(TextBox.FontSizeProperty, animation);
             label.SetValue(Grid.ColumnProperty, 0);
             grid.Children.Add(label);
 
@@ -266,13 +314,13 @@ namespace Mastermind
             _timer?.Stop();
 
             string title = "YOU LOOSE";
-            string message = $"You failed!! De correcte code was {string.Join(' ', selectedColors.Select(x => x.name))}. Nog eens proberen?";
+            string message = $"You failed!! De correcte code was {string.Join(' ', _selectedColors.Select(x => x.name))}. Nog eens proberen?";
             MessageBoxImage icon = MessageBoxImage.Question;
 
             if (isVictory)
             {
                 title = "WINNER";
-                message = $"Code is gekraakt in {attempts} pogingen! Wil je nog eens proberen?";
+                message = $"Code is gekraakt in {_attempts} pogingen! Wil je nog eens proberen?";
                 icon = MessageBoxImage.Information;
             }
 
@@ -289,7 +337,7 @@ namespace Mastermind
         {
             _timerCount++;
             timeLabel.Text = $"{(_timerMaxCount + 1) - _timerCount}";
-            if (attempts >= _maxAttempts)
+            if (_attempts >= _maxAttempts)
                 EndGame(isVictory: false);
 
             StopCountdown();
@@ -314,11 +362,11 @@ namespace Mastermind
         {
             if (_timerCount == _timerMaxCount + 1)
             {
-                attempts++;
-                pogingLabel.Text = $"POGING: {attempts}";
-                scoreLabel.Text = $"{gamePoints}";
+                _attempts++;
+                pogingLabel.Text = $"POGING: {_attempts}";
+                scoreLabel.Text = $"{_gamePoints}";
 
-                if (attempts >= _maxAttempts)
+                if (_attempts >= _maxAttempts)
                     EndGame(isVictory: false);
                 else
                     StartCountdown();
@@ -348,6 +396,7 @@ namespace Mastermind
         private void ScrollToTop()
         {
             scrollViewer.ScrollToTop();
+            //todo: smooth maken
         }
         private void AnimateButton(Button button, double from, double to, int speedMs, bool autoReverse = false)
         {
@@ -374,25 +423,25 @@ namespace Mastermind
                 AnimateButton(button, from: 1, to: 0.9, speedMs: 80, autoReverse: true);
             }
 
-            if (isCorrectGuess || attempts >= _maxAttempts)
+            if (_isCorrectGuess || _attempts >= _maxAttempts)
                 return;
 
-            attempts++;
-            if (selectedColors.Any() && selectedColors.Count == 4)
+            _attempts++;
+            if (_selectedColors.Any() && _selectedColors.Count == 4)
             {
-                ControlColors(selectedColors.Select(x => x.name).ToArray());
-                pogingLabel.Text = $"POGING: {attempts}";
-                scoreLabel.Text = $"{gamePoints}";
+                ControlColors(_selectedColors.Select(x => x.name).ToArray());
+                pogingLabel.Text = $"POGING: {_attempts}";
+                scoreLabel.Text = $"{_gamePoints}";
 
-                if (!isCorrectGuess)
+                if (!_isCorrectGuess)
                 {
-                    if (attempts >= _maxAttempts)
+                    if (_attempts >= _maxAttempts)
                     {
                         EndGame(isVictory: false);
                     }
                     else
                     {
-                        if (enableResetOnEachTurn)
+                        if (_enableResetOnEachTurn)
                             ResetAllBalls();
 
                         StartCountdown();
@@ -558,11 +607,11 @@ namespace Mastermind
             if (debugTextBox.Visibility == Visibility.Visible)
             {
                 debugTextBox.Visibility = Visibility.Collapsed;
-                isDebugMode = false;
+                _isDebugMode = false;
             }
             else
             {
-                isDebugMode = true;
+                _isDebugMode = true;
                 debugTextBox.Visibility = Visibility.Visible;
             }
         }
@@ -583,7 +632,7 @@ namespace Mastermind
         }
         private void mainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (MessageBox.Show("Wilt u het spel vroegtijdig beeindigen?", $"poging {attempts}/10", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
+            if (MessageBox.Show("Wilt u het spel vroegtijdig beeindigen?", $"poging {_attempts}/10", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
                 e.Cancel = true;
         }
         #endregion
